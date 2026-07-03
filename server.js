@@ -81,7 +81,7 @@ app.post("/generate", async (req, res) => {
         serialNumber: passId,
         passTypeIdentifier: process.env.PASS_TYPE_ID,
         teamIdentifier: process.env.APPLE_TEAM_ID,
-        authenticationToken: passId.replace(/-/g, ""),
+        authenticationToken: require("crypto").createHash("sha256").update(passId).digest("hex"),
         description: "8848 Club Membership"
       }
     );
