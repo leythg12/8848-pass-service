@@ -1,0 +1,14 @@
+{
+  "name": "8848-pass-service",
+  "version": "1.0.0",
+  "description": "Builds signed Apple Wallet .pkpass files for 8848 Club, called by the Cloudflare Worker",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "passkit-generator": "^3.2.0"
+  }
+}

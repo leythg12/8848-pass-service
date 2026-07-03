@@ -1,0 +1,21 @@
+{
+  "formatVersion": 1,
+  "organizationName": "8848 Club",
+  "description": "8848 Club Membership",
+  "logoText": "8848 Club",
+  "backgroundColor": "rgb(10, 10, 10)",
+  "foregroundColor": "rgb(255, 255, 255)",
+  "labelColor": "rgb(216, 216, 199)",
+  "storeCard": {
+    "headerFields": [],
+    "primaryFields": [],
+    "secondaryFields": []
+  },
+  "locations": [
+    {
+      "longitude": -7.6192,
+      "latitude": 33.5731,
+      "relevantText": "Welcome to 8848 Club!"
+    }
+  ]
+}
