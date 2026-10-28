@@ -1,45 +1,14 @@
-// server.js — deploy this as a small Render web service.
+// server.js — HYBRID Apple Wallet pass service (Render).
 //
-// This replaces the broken pkpass-signing code that was living inside the
-// Cloudflare Worker (parsePKCS12/buildPKCS7Signature were stubs — Workers
-// can't do the ASN.1/PKCS#7 construction Apple Wallet needs). This service
-// does the real signing using the `passkit-generator` library, which wraps
-// OpenSSL-equivalent signing correctly.
-//
-// ── One-time setup ──────────────────────────────────────────────────
-// 1. In the Apple Developer portal (under Rizlane Sefrioui's account):
-//      Certificates, IDs & Profiles → Identifiers → Pass Type IDs
-//      → create one, e.g. pass.ma.8848club.membership
-//    Then Certificates → + → Pass Type ID Certificate → select it →
-//    upload a CSR (Keychain Access → Certificate Assistant → Request a
-//    Certificate from a CA) → download the generated .cer
-// 2. Import the .cer into Keychain (double-click it), find it under
-//    "My Certificates", right-click → Export → save as Certificates.p12
-//    with a passphrase you'll remember.
-// 3. Download Apple's WWDR (Worldwide Developer Relations) intermediate
-//    certificate: https://www.apple.com/certificateauthority/ → "Worldwide
-//    Developer Relations - G4" (or current) → AppleWWDRCAG4.cer
-// 4. Convert everything to PEM (run locally, e.g. on the Mac you'd use
-//    for Xcode dev):
-//      openssl pkcs12 -in Certificates.p12 -nocerts -out signerKey.pem -passout pass:YOUR_PASSPHRASE
-//      openssl pkcs12 -in Certificates.p12 -clcerts -nokeys -out signerCert.pem -passout pass:YOUR_PASSPHRASE
-//      openssl x509 -inform der -in AppleWWDRCAG4.cer -out wwdr.pem
-// 5. Base64 the three PEM files (`base64 -i signerKey.pem | pbcopy` etc.)
-//    and set them as Render environment variables (see below).
-// 6. Fill in models/membership.pass/pass.json with your real
-//    passTypeIdentifier + teamIdentifier, and drop real icon.png /
-//    icon@2x.png / logo.png / logo@2x.png (and optionally strip.png)
-//    into models/membership.pass/.
-//
-// ── Render environment variables ────────────────────────────────────
-//   SHARED_SECRET             matches the Worker's SECRET, checked via
-//                             x-8848-secret header
+// Same service as before (passkit-generator, same endpoint, same env vars),
+// rebranded from 8848 Club to HYBRID. Nothing to change in Render's settings:
+//   SHARED_SECRET            matches the Worker's SECRET (x-8848-secret header)
 //   WWDR_PEM_B64
 //   SIGNER_CERT_PEM_B64
 //   SIGNER_KEY_PEM_B64
 //   SIGNER_KEY_PASSPHRASE
-//   PASS_TYPE_ID              e.g. pass.ma.8848club.membership
-//   APPLE_TEAM_ID
+//   PASS_TYPE_ID             keep pass.ma.8848club — changing it breaks updates for existing passes
+//   APPLE_TEAM_ID            J8A4GVWKC2
 
 const express = require("express");
 const { PKPass } = require("passkit-generator");
@@ -74,48 +43,51 @@ app.post("/generate", async (req, res) => {
           wwdr: pemFromB64(process.env.WWDR_PEM_B64),
           signerCert: pemFromB64(process.env.SIGNER_CERT_PEM_B64),
           signerKey: pemFromB64(process.env.SIGNER_KEY_PEM_B64),
-          signerKeyPassphrase: process.env.SIGNER_KEY_PASSPHRASE
-        }
+          signerKeyPassphrase: process.env.SIGNER_KEY_PASSPHRASE,
+        },
       },
       {
         serialNumber: passId,
         passTypeIdentifier: process.env.PASS_TYPE_ID,
         teamIdentifier: process.env.APPLE_TEAM_ID,
-        authenticationToken: require("crypto").createHash("sha256").update(passId).digest("hex"),
-        description: "8848 Club Membership"
-      }
+        authenticationToken: passId.replace(/-/g, ""),
+        description: "Pass membre HYBRID",
+      },
     );
 
-    // Clear and set fields fresh so re-generation (renewals) doesn't
-    // duplicate entries from the template
-    pass.headerFields.splice(0, pass.headerFields.length);
-    pass.primaryFields.splice(0, pass.primaryFields.length);
-    pass.secondaryFields.splice(0, pass.secondaryFields.length);
+    // Reset fields so renewals don't duplicate template entries
+    for (const f of [pass.headerFields, pass.primaryFields, pass.secondaryFields, pass.backFields]) {
+      f.splice(0, f.length);
+    }
 
-    pass.headerFields.push({ key: "plan", label: "PLAN", value: planName || "Membership" });
-    pass.primaryFields.push({ key: "member", label: "MEMBER", value: memberName });
+    pass.headerFields.push({ key: "plan", label: "FORMULE", value: planName || "Abonnement" });
+    pass.primaryFields.push({ key: "member", label: "MEMBRE", value: memberName });
     pass.secondaryFields.push(
       {
         key: "expiry",
-        label: "VALID UNTIL",
+        label: "VALABLE JUSQU'AU",
         value: expiryDate || "",
-        dateStyle: "PKDateStyleMedium"
+        dateStyle: "PKDateStyleMedium",
       },
-      { key: "memberId", label: "MEMBER ID", value: memberId || "", textAlignment: "PKTextAlignmentRight" }
+      { key: "memberId", label: "N° MEMBRE", value: memberId || "", textAlignment: "PKTextAlignmentRight" },
+    );
+    pass.backFields.push(
+      { key: "about", label: "HYBRID", value: "Force, cardio et mobilité réunis en un seul mouvement. Chaque effort compte." },
+      { key: "contact", label: "CONTACT", value: "fitness@villasahrai.com\n+212 664 959 648" },
+      { key: "web", label: "SITE", value: "https://www.8848club.ma" },
     );
 
     pass.setBarcodes({
       message: unlockUrl,
       format: "PKBarcodeFormatQR",
       messageEncoding: "iso-8859-1",
-      altText: "Scan to unlock"
+      altText: "Scannez pour entrer",
     });
 
     const buffer = pass.getAsBuffer();
-
     res.set({
       "Content-Type": "application/vnd.apple.pkpass",
-      "Content-Disposition": `attachment; filename="8848-${passId}.pkpass"`
+      "Content-Disposition": `attachment; filename="hybrid-${passId}.pkpass"`,
     });
     return res.send(buffer);
   } catch (err) {
@@ -124,7 +96,7 @@ app.post("/generate", async (req, res) => {
   }
 });
 
-app.get("/health", (req, res) => res.json({ status: "ok" }));
+app.get("/health", (req, res) => res.json({ status: "ok", brand: "HYBRID" }));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`8848 pass-service listening on ${PORT}`));
+app.listen(PORT, () => console.log(`HYBRID pass-service listening on ${PORT}`));
