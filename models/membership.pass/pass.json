@@ -1,21 +1,21 @@
 {
   "formatVersion": 1,
-  "organizationName": "8848 Club",
-  "description": "8848 Club Membership",
-  "logoText": "8848 Club",
-  "backgroundColor": "rgb(10, 10, 10)",
-  "foregroundColor": "rgb(255, 255, 255)",
-  "labelColor": "rgb(216, 216, 199)",
+  "organizationName": "HYBRID",
+  "description": "Pass membre HYBRID",
+  "backgroundColor": "rgb(8, 61, 50)",
+  "foregroundColor": "rgb(233, 227, 220)",
+  "labelColor": "rgb(167, 193, 58)",
   "storeCard": {
     "headerFields": [],
     "primaryFields": [],
-    "secondaryFields": []
+    "secondaryFields": [],
+    "backFields": []
   },
   "locations": [
     {
       "longitude": -7.6192,
       "latitude": 33.5731,
-      "relevantText": "Welcome to 8848 Club!"
+      "relevantText": "Bienvenue chez HYBRID — présentez votre pass à l'entrée."
     }
   ]
 }
